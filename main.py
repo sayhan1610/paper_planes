@@ -11,10 +11,12 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Paper Airplane Game")
 
 # Constants
-PLANE_WIDTH = 50
-PLANE_HEIGHT = 30
-OBSTACLE_SIZE = 50  
-BONUS_ITEM_SIZE = 20
+PLANE_WIDTH = 70
+PLANE_HEIGHT = 70
+OBSTACLE_SIZE = 60  # Example size, adjust as needed
+BONUS_ITEM_SIZE = 30
+POWERUP_SIZE = 40  # Size for power-ups
+WIND_SIZE = 50  # Size for wind images
 GRAVITY = 0.5
 LIFT = 0.3
 MAX_VELOCITY = 5
@@ -37,17 +39,39 @@ plane_img = pygame.transform.scale(plane_img, (PLANE_WIDTH, PLANE_HEIGHT))
 plane_img_up = pygame.transform.scale(plane_img_up, (PLANE_WIDTH, PLANE_HEIGHT))
 plane_img_down = pygame.transform.scale(plane_img_down, (PLANE_WIDTH, PLANE_HEIGHT))
 
+# Load and scale wind images
 upwind_img = pygame.image.load("images/upwind.png")
 downwind_img = pygame.image.load("images/downwind.png")
+upwind_img = pygame.transform.scale(upwind_img, (WIND_SIZE, WIND_SIZE))
+downwind_img = pygame.transform.scale(downwind_img, (WIND_SIZE, WIND_SIZE))
+
+# Load and scale power-up images
 speed_up_img = pygame.image.load("images/speed_up.png")
 speed_down_img = pygame.image.load("images/speed_down.png")
+shield_img = pygame.image.load("images/shield.png")  # Load shield image
+speed_up_img = pygame.transform.scale(speed_up_img, (POWERUP_SIZE, POWERUP_SIZE))
+speed_down_img = pygame.transform.scale(speed_down_img, (POWERUP_SIZE, POWERUP_SIZE))
+shield_img = pygame.transform.scale(shield_img, (POWERUP_SIZE, POWERUP_SIZE))  # Scale shield image
+
+# Load and scale bonus item images
 coin_img = pygame.image.load("images/coin.png")
 star_img = pygame.image.load("images/star.png")
+coin_img = pygame.transform.scale(coin_img, (BONUS_ITEM_SIZE, BONUS_ITEM_SIZE))
+star_img = pygame.transform.scale(star_img, (BONUS_ITEM_SIZE, BONUS_ITEM_SIZE))
 
-# Obstacle images
+# Scale obstacle images
 obstacle_images = [
     pygame.transform.scale(pygame.image.load(f"images/object{i}.png").convert_alpha(), (OBSTACLE_SIZE, OBSTACLE_SIZE)) for i in range(10)
 ]
+
+# Load sounds
+bg_music = pygame.mixer.Sound("sounds/bg_music.mp3")
+crash_sound = pygame.mixer.Sound("sounds/crash.mp3")
+item_sound = pygame.mixer.Sound("sounds/item.mp3")
+wind_sound = pygame.mixer.Sound("sounds/wind.mp3")
+
+# Play background music on loop
+bg_music.play(loops=-1)
 
 # Define classes for game objects
 class Plane:
@@ -88,10 +112,10 @@ class Plane:
         return False
 
     def draw(self):
-        # Use plane image
         screen.blit(plane_img, self.rect.topleft)
         if self.shield > 0:
-            pygame.draw.ellipse(screen, (0, 255, 0), self.rect.inflate(20, 20), 2)
+            # Draw the shield image
+            screen.blit(shield_img, (self.rect.x - 10, self.rect.y - 10))
 
 class Obstacle:
     def __init__(self, obstacle_type='static'):
@@ -161,15 +185,16 @@ class Wind:
             plane.velocity -= WIND_EFFECT
         elif self.wind_type == 'down':
             plane.velocity += WIND_EFFECT
+        wind_sound.play()  # Play wind sound when wind affects the plane
 
 class PowerUp:
     def __init__(self, powerup_type):
         self.powerup_type = powerup_type
         self.rect = pygame.Rect(
             SCREEN_WIDTH,
-            random.randint(0, SCREEN_HEIGHT - PLANE_HEIGHT),
-            PLANE_WIDTH,
-            PLANE_HEIGHT,
+            random.randint(0, SCREEN_HEIGHT - POWERUP_SIZE),
+            POWERUP_SIZE,
+            POWERUP_SIZE,
         )
         self.duration = 300
 
@@ -178,7 +203,7 @@ class PowerUp:
 
     def draw(self):
         if self.powerup_type == 'shield':
-            pygame.draw.rect(screen, (0, 255, 0), self.rect)
+            screen.blit(shield_img, self.rect.topleft)  # Draw shield image for shield power-up
         elif self.powerup_type == 'speed':
             screen.blit(speed_up_img, self.rect.topleft)
         elif self.powerup_type == 'slow':
@@ -220,6 +245,7 @@ class BonusItem:
             score += 100
         elif self.item_type == 'coin':
             score += 50
+        item_sound.play()  # Play item sound when picking up an item
         return score
 
 def show_home_page():
@@ -253,116 +279,119 @@ def show_score_report(score):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                return
+                return False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
-                    return
+                    return True
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
-                    return
+                    return False
 
 def game_loop():
-    clock = pygame.time.Clock()
-    plane = Plane()
-    obstacles = []
-    winds = []
-    powerups = []
-    bonus_items = []
-    frame_count = 0
-    score = 0
-    last_powerup_time = 0
-    running = True
-    holding_space = False
+    while True:
+        clock = pygame.time.Clock()
+        plane = Plane()
+        obstacles = []
+        winds = []
+        powerups = []
+        bonus_items = []
+        frame_count = 0
+        score = 0
+        last_powerup_time = 0
+        running = True
+        holding_space = False
 
-    font = pygame.font.Font(None, FONT_SIZE)
+        font = pygame.font.Font(None, FONT_SIZE)
 
-    while running:
-        screen.blit(sky_background, (0, 0))
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+        while running:
+            screen.blit(sky_background, (0, 0))
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return  # Exit the game
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        holding_space = True
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_SPACE:
+                        holding_space = False
+
+            if plane.update(holding_space):
+                crash_sound.play()  # Play crash sound when plane hits an obstacle
                 running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    holding_space = True
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_SPACE:
-                    holding_space = False
 
-        if plane.update(holding_space):
-            running = False
+            if frame_count % OBSTACLE_FREQUENCY == 0:
+                obstacle_type = random.choice(['static', 'moving', 'rotating'])
+                obstacles.append(Obstacle(obstacle_type))
 
-        if frame_count % OBSTACLE_FREQUENCY == 0:
-            obstacle_type = random.choice(['static', 'moving', 'rotating'])
-            obstacles.append(Obstacle(obstacle_type))
+            if frame_count % WIND_FREQUENCY == 0:
+                wind_type = 'up' if random.random() < 0.5 else 'down'
+                winds.append(Wind(wind_type))
 
-        if frame_count % WIND_FREQUENCY == 0:
-            wind_type = 'up' if random.random() < 0.5 else 'down'
-            winds.append(Wind(wind_type))
+            if frame_count % (WIND_FREQUENCY * 2) == 0:
+                powerup_type = random.choice(['shield', 'speed', 'slow'])
+                powerups.append(PowerUp(powerup_type))
 
-        if frame_count % (WIND_FREQUENCY * 2) == 0:
-            powerup_type = random.choice(['shield', 'speed', 'slow'])
-            powerups.append(PowerUp(powerup_type))
+            if frame_count % 200 == 0:  # Adjust frequency of bonus items
+                item_type = random.choice(['star', 'coin'])
+                bonus_items.append(BonusItem(item_type))
 
-        if frame_count % 200 == 0:  # Adjust frequency of bonus items
-            item_type = random.choice(['star', 'coin'])
-            bonus_items.append(BonusItem(item_type))
+            for obstacle in obstacles:
+                obstacle.update()
+                obstacle.draw()
+                if obstacle.is_off_screen():
+                    obstacles.remove(obstacle)
 
-        for obstacle in obstacles:
-            obstacle.update()
-            obstacle.draw()
-            if obstacle.is_off_screen():
-                obstacles.remove(obstacle)
+            for wind in winds:
+                wind.update()
+                wind.draw()
+                if plane.rect.colliderect(wind.rect):
+                    wind.apply_effect(plane)
+                if wind.is_off_screen():
+                    winds.remove(wind)
 
-        for wind in winds:
-            wind.update()
-            wind.draw()
-            if plane.rect.colliderect(wind.rect):
-                wind.apply_effect(plane)
-            if wind.is_off_screen():
-                winds.remove(wind)
+            for powerup in powerups:
+                powerup.update()
+                powerup.draw()
+                if plane.rect.colliderect(powerup.rect):
+                    powerup.apply_effect(plane)
+                    last_powerup_time = frame_count
+                    plane.combo_multiplier = 1.5  # Increase multiplier for power-ups
+                    powerups.remove(powerup)
+                if powerup.is_off_screen():
+                    powerups.remove(powerup)
 
-        for powerup in powerups:
-            powerup.update()
-            powerup.draw()
-            if plane.rect.colliderect(powerup.rect):
-                powerup.apply_effect(plane)
-                last_powerup_time = frame_count
-                plane.combo_multiplier = 1.5  # Increase multiplier for power-ups
-                powerups.remove(powerup)
-            if powerup.is_off_screen():
-                powerups.remove(powerup)
+            for bonus_item in bonus_items:
+                bonus_item.update()
+                bonus_item.draw()
+                if plane.rect.colliderect(bonus_item.rect):
+                    score = bonus_item.apply_effect(plane, score)
+                    bonus_items.remove(bonus_item)
+                if bonus_item.is_off_screen():
+                    bonus_items.remove(bonus_item)
 
-        for bonus_item in bonus_items:
-            bonus_item.update()
-            bonus_item.draw()
-            if plane.rect.colliderect(bonus_item.rect):
-                score = bonus_item.apply_effect(plane, score)
-                bonus_items.remove(bonus_item)
-            if bonus_item.is_off_screen():
-                bonus_items.remove(bonus_item)
+            plane.draw()
 
-        plane.draw()
+            for obstacle in obstacles:
+                if plane.rect.colliderect(obstacle.rect):
+                    if plane.shield <= 0:
+                        crash_sound.play()  # Play crash sound when plane hits an obstacle
+                        running = False
 
-        for obstacle in obstacles:
-            if plane.rect.colliderect(obstacle.rect):
-                if plane.shield <= 0:
-                    running = False
+            # Update and draw score
+            score += plane.rect.x // 10  # Increase score based on distance traveled
+            if frame_count - last_powerup_time > COMBO_MULTIPLIER_DURATION:
+                plane.combo_multiplier = 1  # Reset multiplier if duration has passed
 
-        # Update and draw score
-        score += plane.rect.x // 10  # Increase score based on distance traveled
-        if frame_count - last_powerup_time > COMBO_MULTIPLIER_DURATION:
-            plane.combo_multiplier = 1  # Reset multiplier if duration has passed
+            score_text = font.render(f"Score: {score * plane.combo_multiplier} m", True, FONT_COLOR)
+            screen.blit(score_text, (10, 10))
 
-        score_text = font.render(f"Score: {score * plane.combo_multiplier} m", True, FONT_COLOR)
-        screen.blit(score_text, (10, 10))
+            pygame.display.flip()
+            clock.tick(60)
+            frame_count += 1
 
-        pygame.display.flip()
-        clock.tick(60)
-        frame_count += 1
-
-    show_score_report(score)
+        if not show_score_report(score):
+            break  # Exit the main loop if quitting the game
 
 # Show home page before starting the game loop
 show_home_page()
 game_loop()
- 
