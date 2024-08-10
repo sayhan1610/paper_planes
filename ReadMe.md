@@ -22,8 +22,6 @@ To get started with the Paper Airplane Game, follow these steps:
    cd paper_planes
    ```
 
-````
-
 2. **Install Dependencies:**
 
    Make sure you have Python 3 and Pygame installed. You can install Pygame using pip:
@@ -85,4 +83,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Assets**: Special thanks to the creators of the images and sounds used in the game.
 
 Enjoy flying your paper airplane and see how high you can score!
-````
