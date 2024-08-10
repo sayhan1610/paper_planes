@@ -83,6 +83,8 @@ class Plane:
         self.slow_motion = 0
         self.combo_multiplier = 1
         self.last_powerup_time = 0
+        self.trail_positions = []  # List to store trail positions
+        self.trail_length = 30  # Number of positions to keep for the trail
 
     def update(self, holding_space):
         if self.shield > 0:
@@ -109,13 +111,39 @@ class Plane:
         if self.rect.top <= 0 or self.rect.bottom >= SCREEN_HEIGHT:
             return True
 
+        # Update trail positions
+        self.trail_positions.append(self.rect.midbottom)  # Track bottom center of the plane
+        if len(self.trail_positions) > self.trail_length:
+            self.trail_positions.pop(0)
+
         return False
 
     def draw(self):
-        screen.blit(plane_img, self.rect.topleft)
+        if self.velocity < -0.5:  # Plane is moving upward
+            screen.blit(plane_img_up, self.rect.topleft)
+        elif self.velocity > 0.5:  # Plane is moving downward
+            screen.blit(plane_img_down, self.rect.topleft)
+        else:  # Plane is level
+            screen.blit(plane_img, self.rect.topleft)
+        
         if self.shield > 0:
             # Draw the shield image
             screen.blit(shield_img, (self.rect.x - 10, self.rect.y - 10))
+        
+        # Draw the dashed trail
+        for i in range(len(self.trail_positions) - 1):
+            start_pos = self.trail_positions[i]
+            end_pos = self.trail_positions[i + 1]
+            dx = end_pos[0] - start_pos[0]
+            dy = end_pos[1] - start_pos[1]
+            distance = math.sqrt(dx**2 + dy**2)
+            num_dashes = int(distance / 10)  # Length of each dash
+            for j in range(num_dashes):
+                dash_start = (start_pos[0] + j * dx / num_dashes, start_pos[1] + j * dy / num_dashes)
+                dash_end = (start_pos[0] + (j + 0.5) * dx / num_dashes, start_pos[1] + (j + 0.5) * dy / num_dashes)
+                pygame.draw.line(screen, (255, 255, 255), dash_start, dash_end, 2)  # Draw dashed line
+
+
 
 class Obstacle:
     def __init__(self, obstacle_type='static'):
@@ -247,15 +275,81 @@ class BonusItem:
             score += 50
         item_sound.play()  # Play item sound when picking up an item
         return score
+    
+def draw_rounded_rect(surface, rect, color, corner_radius):
+    """
+    Draw a rectangle with rounded edges.
+    :param surface: Surface to draw on.
+    :param rect: pygame.Rect object.
+    :param color: Color of the rectangle.
+    :param corner_radius: Radius of the rounded corners.
+    """
+    pygame.draw.rect(surface, color, rect, border_radius=corner_radius)
+
+def show_instructions_page():
+    font = pygame.font.Font(None, FONT_SIZE)
+    instructions = [
+        "Instructions:",
+        "1. Use SPACEBAR to make the plane fly upwards.",
+        "2. Avoid obstacles that move horizontally, vertically, or rotate.",
+        "3. Collect coins (+50 points) and stars (+100 points) to increase your score.",
+        "4. Catch Power-Ups:",
+        "    - Shield: Protects you from one obstacle hit.",
+        "    - Speed Boost: Increases your vertical speed temporarily.",
+        "    - Slow Motion: Slows down your vertical speed temporarily.",
+        "5. Be mindful of the wind:",
+        "    - Upwind: Pushes the plane upwards.",
+        "    - Downwind: Pushes the plane downwards.",
+        "6. The score multiplier increases with power-ups.",
+        "Press ENTER to go back."
+    ]
+
+    while True:
+        screen.blit(sky_background, (0, 0))
+        for i, line in enumerate(instructions):
+            instruction_text = font.render(line, True, FONT_COLOR)
+            text_rect = instruction_text.get_rect(center=(SCREEN_WIDTH // 2, 100 + i * 40))
+            # Define the rounded rectangle background
+            bg_rect = pygame.Rect(text_rect.left - 10, text_rect.top - 5, text_rect.width + 20, text_rect.height + 10)
+            draw_rounded_rect(screen, bg_rect, (0, 0, 0), 10)  # Draw black rounded rectangle with corner radius 10
+            screen.blit(instruction_text, text_rect)
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    return True
+
 
 def show_home_page():
     font = pygame.font.Font(None, FONT_SIZE)
     while True:
         screen.blit(sky_background, (0, 0))
+        
+        # Title text with rounded background
         title_text = font.render("Paper Airplane Game", True, FONT_COLOR)
+        title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 60))
+        title_bg_rect = pygame.Rect(title_rect.left - 10, title_rect.top - 5, title_rect.width + 20, title_rect.height + 10)
+        draw_rounded_rect(screen, title_bg_rect, (0, 0, 0), 10)
+        screen.blit(title_text, title_rect)
+
+        # Start text with rounded background
         start_text = font.render("Press ENTER to Start", True, FONT_COLOR)
-        screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, SCREEN_HEIGHT // 2 - title_text.get_height() // 2 - 30))
-        screen.blit(start_text, (SCREEN_WIDTH // 2 - start_text.get_width() // 2, SCREEN_HEIGHT // 2 + 30))
+        start_rect = start_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30))
+        start_bg_rect = pygame.Rect(start_rect.left - 10, start_rect.top - 5, start_rect.width + 20, start_rect.height + 10)
+        draw_rounded_rect(screen, start_bg_rect, (0, 0, 0), 10)
+        screen.blit(start_text, start_rect)
+
+        # Instructions text with rounded background
+        instructions_text = font.render("Press I for Instructions", True, FONT_COLOR)
+        instructions_rect = instructions_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 80))
+        instructions_bg_rect = pygame.Rect(instructions_rect.left - 10, instructions_rect.top - 5, instructions_rect.width + 20, instructions_rect.height + 10)
+        draw_rounded_rect(screen, instructions_bg_rect, (0, 0, 0), 10)
+        screen.blit(instructions_text, instructions_rect)
+
         pygame.display.flip()
 
         for event in pygame.event.get():
@@ -265,6 +359,12 @@ def show_home_page():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     return
+                if event.key == pygame.K_i:
+                    if not show_instructions_page():
+                        pygame.quit()
+                        return
+
+
 
 def show_score_report(score):
     font = pygame.font.Font(None, FONT_SIZE)
