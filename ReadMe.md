@@ -1,6 +1,3 @@
-Here's a `README.md` for your `paper_planes` game repository. It provides a general overview, setup instructions, and a guide to the game:
-
-````markdown
 # Paper Airplane Game
 
 Welcome to the **Paper Airplane Game**! This is a fun and engaging game where you control a paper airplane and navigate through various obstacles while collecting items and power-ups. Built with Pygame, this project is a great example of using Python for game development.
@@ -24,6 +21,7 @@ To get started with the Paper Airplane Game, follow these steps:
    git clone https://github.com/sayahan1610/paper_planes.git
    cd paper_planes
    ```
+
 ````
 
 2. **Install Dependencies:**
@@ -87,3 +85,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Assets**: Special thanks to the creators of the images and sounds used in the game.
 
 Enjoy flying your paper airplane and see how high you can score!
+````
