@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "paper planes"
+version = "0.1.0"
+description = "A paper plane riding game with sound fx and various game elements built using PyGame"
+authors = ["Sayhan Rahman <sayhanrahman@gokkusagi.k12.tr>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+pygame = "^2.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
